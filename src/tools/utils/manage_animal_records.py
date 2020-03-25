@@ -41,7 +41,7 @@ def create_new_animal_record(
     column_labels = ["project", "pi", "user",
                      "species", "strain", "animal_id",
                      "sex", "date_of_birth", "date_of_arrival",
-                     "age_at_arrival_weeks", "location_id",
+                     "age_at_arrival_weeks", "location_id", "date_of_sacrifice",
                      ]
     # Create the shape of the dataframe.
     animal_record = pd.DataFrame(index=np.arange(len(animal_list)),
@@ -62,6 +62,7 @@ def create_new_animal_record(
         animal_record["date_of_birth"] = date_of_birth
         animal_record["date_of_arrival"] = date_of_arrival
         animal_record["location_id"] = location_id
+        animal_record["date_of_sacrifice"] = np.nan()
 
     return animal_record
 
@@ -105,7 +106,7 @@ def update_main_record(
 ##############################################################################
 
 
-def save_animal_record(
+def save_new_animal_record(
     animal_record,
     save_dir,
     save_csv=True,
@@ -205,13 +206,58 @@ def fetch_from_main_record(
     # Specify the file name
     file_name = f'{user.upper()}_EXP{experiment_number}_animal_record.xls'
 
-    # Save the file in the specific working directory
-    record_to_return.to_excel(os.path.join(output_path, file_name))
+    if output_path is not None:
+        # Save the file in the specific working directory
+        record_to_return.to_excel(os.path.join(output_path, file_name))
+        # Print success message
+        message = f'Dataframe saved at: {os.path.join(output_path, file_name)}'
 
-    # Print success message
-    message = f'Dataframe saved at: {os.path.join(output_path, file_name)}'
-
-    return message
+    return record_to_return
 
 ##############################################################################
 
+
+def update_record_info(
+    animal_record,
+    animal_id_list,
+    column_to_update,
+    value_to_add,
+):
+    """Update an animal record."""
+    assert isinstance(animal_id_list, list), \
+        'animal_id_list must be a list of integers'
+    assert isinstance(value_to_add, (str, int, float)), \
+        'value_to_add must be a single string, integer or float'
+
+    # extract row indexer used to subset the data
+    row_indexer = animal_record['animal_id'].isin(animal_id_list)
+
+    # Replace the value at the column of interest
+    animal_record.loc[row_indexer, column_to_update] = value_to_add
+
+    return animal_record
+
+###############################################################################
+
+
+# Find the previous version of the record
+def save_main_record(
+    main_record,
+    main_record_dir,
+    base_name=None,
+):
+    """To be completed."""
+    assert isinstance(base_name, (str, object)), \
+        'base_name must finish with .csv extension'
+
+    if base_name is None:
+        file_name = 'main_record_{}.csv'.format(time.strftime('%Y%m%d_%H%M%S'))
+        saving_path = os.path.join(main_record_dir, file_name)
+        main_record.to_csv(saving_path)
+        print(f'File saved at {saving_path}')
+    else:
+        file_name = '{}_{}.csv'.format(base_name,
+                                       time.strftime('%Y%m%d_%H%M%S'))
+        saving_path = os.path.join(main_record_dir, file_name)
+        main_record.to_csv(saving_path)
+        print(f'File saved at {saving_path}')
