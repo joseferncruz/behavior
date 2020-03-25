@@ -5,3 +5,4 @@ desktop.ini
 documentation/
 notebooks/
 README.md
+src/tools/utils/__pycache__/
