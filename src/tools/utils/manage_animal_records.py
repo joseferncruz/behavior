@@ -38,7 +38,6 @@ def create_new_animal_record(
     dataframe
         dataframe with all animals and respective information in a panel
     """
-
     column_labels = ["project", "pi", "user",
                      "species", "strain", "animal_id",
                      "sex", "date_of_birth", "date_of_arrival",
@@ -128,8 +127,7 @@ def save_animal_record(
     save_excel: bool, optional
         Save file as .xls
 
-    Returns
-    -------
+
 
 
     """
@@ -189,3 +187,31 @@ def get_main_record(
         print('There is no main_record in this folder.')
 
 ##############################################################################
+
+
+def fetch_from_main_record(
+    animal_id_list,
+    main_record,
+    user='',
+    experiment_number='',
+    output_path=None,
+):
+    """DOC String."""
+    # Get the dataframe
+    record_to_return = main_record[main_record['animal_id'].isin(animal_id_list
+                                                                 )
+                                   ]
+
+    # Specify the file name
+    file_name = f'{user.upper()}_EXP{experiment_number}_animal_record.xls'
+
+    # Save the file in the specific working directory
+    record_to_return.to_excel(os.path.join(output_path, file_name))
+
+    # Print success message
+    message = f'Dataframe saved at: {os.path.join(output_path, file_name)}'
+
+    return message
+
+##############################################################################
+
