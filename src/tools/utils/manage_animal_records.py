@@ -8,6 +8,29 @@ import pandas as pd
 import numpy as np
 import os
 import time
+import sys
+
+##############################################################################
+
+
+def load_source_code_library(src_directory_path):
+    """Load source code library."""
+    if src_directory_path.endswith('src'):
+        if True in [element.endswith('src') for element in sys.path]:
+            print('Source code library is already loaded.')
+        else:
+            print('Source code library not found.\
+                  \nAppending src_directory_path...')
+            try:
+                sys.path.append(src_directory_path)
+                print('Source code library is loaded.')
+            except 'LibraryNotFound':
+                print('Error with given source code library pathway')
+                src_directory_path = input('Insert a valid path \
+                                           for the source code library: ')
+    else:
+        print('Error with pathway provided. Source folder not found.\
+              Verify the folder and try again.')
 
 
 ##############################################################################
@@ -53,26 +76,27 @@ def create_new_animal_record(
     for animal in range(len(animal_list_sorted)):
         animal_record.iloc[animal, 5] = animal_list_sorted[animal]
         animal_record["project"] = project
-        animal_record["pi"] = PI
-        animal_record["user"] = user
-        animal_record["species"] = species
-        animal_record["strain"] = strain
+        animal_record["pi"] = PI.lower()
+        animal_record["user"] = user.lower()
+        animal_record["species"] = species.lower()
+        animal_record["strain"] = strain.lower()
         animal_record["age_at_arrival_weeks"] = age_at_arrival_weeks
-        animal_record["sex"] = sex
+        animal_record["sex"] = sex.lower()
         animal_record["date_of_birth"] = date_of_birth
         animal_record["date_of_arrival"] = date_of_arrival
-        animal_record["location_id"] = location_id
-        animal_record["date_of_sacrifice"] = np.nan()
+        animal_record["location_id"] = location_id.lower()
+        animal_record["date_of_sacrifice"] = np.nan
 
     return animal_record
 
 ##############################################################################
 
 
-def update_main_record(
+def merge_main_record(
     new_animal_record,
     animal_record_to_update,
-    save_output=None
+    output_dir,
+    save_output=False,
 ):
     """Update an existing animal record.
 
@@ -95,11 +119,11 @@ def update_main_record(
     merged_records = pd.concat([animal_record_to_update,
                                 new_animal_record])
     # Save file.
-    if save_output is not None:
+    if save_output:
         file_name = 'main_record_{}.csv'.format(time.strftime('%Y%m%d_%H%M%S'))
-        saving_path = os.path.join(save_output, file_name)
+        saving_path = os.path.join(output_dir, file_name)
         merged_records.to_csv(saving_path)
-        print(f'File saved at {saving_path}')
+        print(f'File saved at: \n{saving_path}')
 
     return merged_records
 
@@ -139,7 +163,7 @@ def save_new_animal_record(
                                          )
                                      )
         animal_record.to_csv(save_csv_path)
-        print(f'File saved at {save_csv_path}.')
+        print(f'File saved at: \n{save_csv_path}.')
 
     if save_excel:
         save_excel_path = os.path.join(save_dir,
@@ -148,7 +172,7 @@ def save_new_animal_record(
                                            )
                                        )
         animal_record.to_excel(save_excel_path)
-        print(f'File saved at {save_excel_path}.')
+        print(f'File saved at: \n{save_excel_path}.')
 
 ##############################################################################
 
@@ -181,7 +205,13 @@ def get_main_record(
                                             latest_main_record,
                                             )
         # Get the dataframe.
-        main_record = pd.read_csv(main_record_filepath, index_col=0)
+        main_record = pd.read_csv(main_record_filepath,
+                                  index_col=0,
+                                  parse_dates=['date_of_birth',
+                                               'date_of_arrival',
+                                               'date_of_sacrifice',
+                                               ]
+                                  )
 
         return (main_record_filepath, main_record)
     else:
@@ -217,7 +247,7 @@ def fetch_from_main_record(
 ##############################################################################
 
 
-def update_record_info(
+def update_main_record(
     animal_record,
     animal_id_list,
     column_to_update,
@@ -228,6 +258,9 @@ def update_record_info(
         'animal_id_list must be a list of integers'
     assert isinstance(value_to_add, (str, int, float)), \
         'value_to_add must be a single string, integer or float'
+
+    # Create a copy of the dataframe
+    animal_record = animal_record.copy()
 
     # extract row indexer used to subset the data
     row_indexer = animal_record['animal_id'].isin(animal_id_list)
