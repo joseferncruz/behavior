@@ -10,15 +10,18 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import time
+import re
 
 ##############################################################################
+
 
 def detect_bonsai_led_state(
     bonsai_csv,
     factor,
     CS_number,
+    output_directory,
 ):
-
+    """DOC."""
     final_answer = "N"
     while final_answer != "Y":
 
@@ -73,17 +76,24 @@ def detect_bonsai_led_state(
                 for cs in CS_frame:
                     ax.annotate(s=str(cs),
                                 xy=(cs, bonsai_df['LED_AREA'].max()),
-                                xytext=(cs, bonsai_df['LED_AREA'].min()),
+                                xycoords='data',
+                                xytext=(cs+1, bonsai_df['LED_AREA'].min()),
                                 arrowprops=dict(facecolor='black', shrink=0.05),
                                 )
                 plt.show()
 
                 print("Write the frame index number (single frame): ",
                       CS_frame)
-                try:
-                    CS_frame.remove(int(input("insert the frame number: ")))
-                except 'Frame error.':
-                    print("The frame index number must be in the list.")
+
+                frame_to_remove = int(input("insert the frame number: "))
+
+                while True:
+                    if frame_to_remove in CS_frame:
+                        CS_frame.remove(frame_to_remove)
+                        break
+                    else:
+                        continue
+
                 print(CS_frame)
                 answer = str(input("Are you done? (Y/N)")).upper()
         else:
@@ -101,15 +111,23 @@ def detect_bonsai_led_state(
         for cs in CS_frame:
             ax.annotate(s=str(cs),
                         xy=(cs, bonsai_df['LED_AREA'].max()),
-                        xytext=(cs, bonsai_df['LED_AREA'].min()),
+                        xycoords='data',
+                        xytext=(cs+1, bonsai_df['LED_AREA'].min()),
                         arrowprops=dict(facecolor='black', shrink=0.05),
-                        )
+                       )
         plt.show()
 
         final_answer = str(input("do you validade this extraction? (Y/N)").upper())
 
     # save file here
-    cs_index_saving_path = bonsai_csv.replace('.csv', "_CS-INDEX.txt")
+    # Use regular expression to find the base name
+    pattern = re.compile(r'\w+_\w+\d+_\d+_\w+\d+_\w_\d+_\w\d+.csv')
+    base_name = re.search(pattern, bonsai_csv).group().replace('.csv',
+                                                               "_CS-INDEX.txt",
+                                                               )
+    
+    cs_index_saving_path = os.path.join(output_directory, base_name)
+    
     with open(cs_index_saving_path, "w") as file:
         file.write(str(CS_frame))
     print(f"Extraction done, cs indices saved at: {cs_index_saving_path}")
@@ -118,11 +136,15 @@ def detect_bonsai_led_state(
 ##############################################################################
 
 
-def merge_extracted_cs_indices(directory):
+def merge_extracted_cs_indices(directory, session):
     """DOC STRING."""
     # Access all the files in the directory
     files_to_process = [file for file in os.listdir(directory)
                         if file.endswith('CS-INDEX.txt')]
+
+    pattern = re.compile(r'_\w\w\w\d\d_')
+    files_to_process = [file for file in files_to_process
+                        if re.search(pattern, file).group() == session]
 
     # generate the dataframe where all the data will be pulled together
 
@@ -140,9 +162,9 @@ def merge_extracted_cs_indices(directory):
         date = file.split("_")[2]
         session = file.split("_")[3].lower()
         species = file.split("_")[4].lower()
-        if species == 'R':
+        if species == 'r':
             species = 'rat'
-        elif species == 'M':
+        elif species == 'm':
             species = 'mouse'
         animal_id = file.split("_")[5]
 
@@ -163,10 +185,18 @@ def merge_extracted_cs_indices(directory):
 ##############################################################################
 
 
-def calculate_frame_rate(directory):
+def calculate_frame_rate(
+        directory,
+        session,
+):
     """DOC STRING."""
+    # Use regex to filter files of interest in the directory
+    pattern = re.compile(r'_\w\w\w\d\d_')
     directory_files = [file for file in os.listdir(directory)
                        if file.endswith('.csv')]
+
+    directory_files = [file for file in directory_files
+                       if re.search(pattern, file).group() == session]
 
     main_dataframe = pd.DataFrame(index=range(len(directory_files)),
                                   columns=['animal_id', 'frame_rate_fps'])
@@ -205,4 +235,3 @@ def calculate_frame_rate(directory):
     return main_dataframe
 
 ##############################################################################
-
