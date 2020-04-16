@@ -1,8 +1,8 @@
-animals/
+animal_record/
 communications/
 data/
 desktop.ini
 documentation/
 notebooks/
 README.md
-src/tools/utils/__pycache__/
+__pycache__/
