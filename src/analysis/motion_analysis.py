@@ -256,3 +256,172 @@ def calculate_threshold(arr, factor):
     return threshold
 
 ###############################################################################
+
+
+def group_darting_events(dataframe):
+    """Group darting events for each cs in pre, peri and post-cs epochs.
+
+    The function uses the dataframe and data
+
+    """
+    darting_events = []
+    running_index = []
+    counter = 1
+    for index, element in enumerate(dataframe['darting_events']):
+        if element == 1:
+            running_index.append(index)
+        else:
+            darting_events.append((counter, running_index))
+            counter += 1
+            running_index = []
+
+    # Remove empty lists
+    darting_events = [list_ for index, list_ in darting_events if list_]
+
+    darting_per_cs_epoch = {
+        'pre_cs': 0,
+        'peri_cs': 0,
+        'post_cs': 0,
+    }
+    # Devide the findings in pre, peri and post-cs
+    for list_ in darting_events:
+        # pre-cs
+        if list_[0] < 900:
+            darting_per_cs_epoch['pre_cs'] += 1
+        elif list_[0] > 900 & list_[0] < 1800:
+            darting_per_cs_epoch['peri_cs'] += 1
+        else:
+            darting_per_cs_epoch['post_cs'] += 1
+
+    return darting_per_cs_epoch
+
+
+###############################################################################
+
+
+def calculate_mean_darting(dataframe):
+    """Calculate mean darting events during pre, peri and post_cs epochs."""
+    # Create shell dataframe
+    df = pd.DataFrame(columns=[
+        'cs_id', 'cs_epoch', 'darting_raw', 'darting_norm', 'darting_events'
+        ]
+    )
+    # Extract unique cs_ids
+    cs_id_list = dataframe.cs_id.unique()
+
+    for cs_id in cs_id_list:
+        # access the specific cs
+        condition = dataframe['cs_id'].isin([cs_id])
+
+        # Extract the relevant time points and cs epochs
+        individual_cs = dataframe[condition]
+
+        individual_cs = individual_cs[['cs_epoch', 'cs_id', 'darting_events']
+                                      ].reset_index(drop=True).iloc[900:3600]
+
+        # Calculate the overall darting and add it to the dataframe
+        darting = individual_cs.groupby(['cs_epoch']).sum().reset_index()
+        darting.columns = ['cs_epoch', 'darting_raw']
+        darting['cs_id'] = cs_id
+
+        # Normalize to the total epoch bin time (30 seconds, 900 frames)
+        darting['darting_norm'] = darting['darting_raw'
+                                          ].agg(lambda x: x/900
+                                                ).agg(lambda x: round(x, 2)
+                                                      )
+
+        # Extracting the number of darting events and merge with the dataframe
+        darting_per_cs_epoch = pd.Series(group_darting_events(individual_cs),
+                                         ).reset_index()
+        darting = darting.merge(darting_per_cs_epoch,
+                                left_on='cs_epoch',
+                                right_on='index',
+                                ).drop('index', axis=1)
+        darting.rename(columns={0: 'darting_events'}, inplace=True)
+
+        # Append to the dataframe to return
+        df = df.append(darting)
+
+    df.reset_index(inplace=True, drop=True)
+
+    return df
+
+###############################################################################
+
+
+def calculate_distance_per_cs_epoch(
+        dataframe,
+        bodypart='ed_back_head',
+        units='cm',
+):
+    """Calculate distance for each cs, cs_epoch based on specific bodypart."""
+    df = pd.DataFrame(columns=[
+            'cs_id', 'cs_epoch', f'total_distance_{units}',
+            ]
+        )
+
+    for cs_id in dataframe['cs_id'].unique():
+        condition = dataframe['cs_id'].isin([cs_id])
+
+        # Extract the relevant time points and cs epochs
+        individual_cs = dataframe[condition]
+
+        individual_cs = individual_cs[['cs_epoch', 'cs_id', bodypart]
+                                      ].reset_index(drop=True).iloc[900:3600]
+
+        # Distance covered during each cs_epoch
+        total_distance = individual_cs.groupby(['cs_epoch']
+                                               ).sum().agg(lambda x: round(x, 2)
+                                                           ).reset_index()
+
+        total_distance.rename(columns={bodypart: f'total_distance_{units}'},
+                              inplace=True)
+
+        # Add cs_id
+        total_distance['cs_id'] = cs_id
+
+        # Append to the dataframe to return
+        df = df.append(total_distance).reset_index(drop=True)
+
+    return df
+
+###############################################################################
+
+
+def calculate_mean_speed_per_epoch(
+        dataframe,
+        bodypart='speed_back_head',
+        units='cm/sec',
+):
+    """Calculate the mean speed during pre, peri and post cs."""
+    df = pd.DataFrame(columns=[
+            'cs_id', 'cs_epoch', f'mean_speed_{units}',
+            ]
+        )
+
+    for cs_id in dataframe['cs_id'].unique():
+
+        condition = dataframe['cs_id'].isin([cs_id])
+
+        # Extract the relevant time points and cs epochs
+        individual_cs = dataframe[condition]
+
+        individual_cs = individual_cs[['cs_epoch', 'cs_id', bodypart]
+                                      ].reset_index(drop=True).iloc[900:3600]
+
+        # Calculate mean speed during each cs_epoch
+        speed = individual_cs.groupby(['cs_epoch']
+                                      ).mean().agg(lambda x: round(x, 2)
+                                                   ).reset_index()
+
+        speed.rename(columns={bodypart: f'mean_speed_{units}'}, inplace=True)
+
+        # Add cs_id
+        speed['cs_id'] = cs_id
+
+        # Append to the dataframe to return
+        df = df.append(speed).reset_index(drop=True)
+    return df
+
+###############################################################################
+
