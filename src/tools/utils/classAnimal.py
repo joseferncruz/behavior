@@ -5,7 +5,8 @@ Created on Mon Apr 13 10:10:06 2020
 @author: Jose Oliveira da Cruz | jose.cruz@nyu.edu
 """
 
-
+import datetime
+import re
 
 class Animal():
     """Create a class to hold attributes of individual animal """
@@ -25,7 +26,7 @@ class Animal():
             cs_start,
             cs_span_sec,
             group,
-            video_key,
+            video_key=None,
     ):
 
         self.project = project
@@ -44,8 +45,21 @@ class Animal():
         self.group = group
         self.video_basename = video_key
 
-    def calculate_age(self, date):
-        """Calculate the age of the subject at a given date."""
-        # Return date in days
-        # date = datetime.datetime.strftime(self.date_of_birth)
-        pass
+    def age_at_experiment(self):
+        """Return the age in days of the subject at the experiment date."""
+        if self.video_basename is None:
+            print('There is no video_basename to extract the date.')
+            pass
+        else:
+            # Parse datetime of birth
+            date_of_birth = datetime.datetime.strptime(self.date_of_birth,
+                                                       '%Y%m%d',
+                                                       )
+
+            # Search in the video_basename the date of experiment
+            pattern = r'(\d\d\d\d\d\d\d\d)'  # yyyymmdd
+            experiment_date = re.search(pattern, self.video_basename).group()
+            print(experiment_date)
+            date = datetime.datetime.strptime(experiment_date, '%Y%m%d')
+
+            return (date - date_of_birth).days
