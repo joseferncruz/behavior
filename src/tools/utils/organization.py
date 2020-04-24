@@ -2,7 +2,7 @@
 """
 Created on Wed Feb 19 10:41:58 2020
 
-@author: jfo2
+@author: Jose Oliveira da Cruz | jose.cruz@nyu.edu
 """
 
 # Dependencies
@@ -13,7 +13,6 @@ from tools.utils.classAnimal import Animal
 
 
 ##############################################################################
-
 
 def fetch_animal_info(
     video_key,
@@ -82,3 +81,24 @@ def fetch_animal_info(
         file_key,
     )
     return animal
+
+###############################################################################
+
+def create_basic_working_record(animal, n_rows):
+    """Create basic dataframe with animal details"""
+
+    columns = [
+        'user', 'exp_id', 'treatment',
+        'session', 'species', 'animal_id',
+        'age_days', 'weight_grams'
+    ]
+    dataframe = pd.DataFrame(index=range(n_rows), columns=columns)
+    dataframe['user'] = animal.user
+    dataframe['exp_id'] = animal.experiment_id
+    dataframe['session'] = animal.session
+    dataframe['species'] = animal.species
+    dataframe['animal_id'] = animal.animal_id
+    dataframe['sex'] = animal.sex
+    dataframe['age_days'] = animal.age_at_experiment()
+
+    return dataframe
