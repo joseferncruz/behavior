@@ -5,6 +5,8 @@ Created on Mon Apr 13 16:10:23 2020
 @author: Jose Oliveira da Cruz | jose.cruz@nyu.edu
 """
 
+from tools.utils.organization import fetch_bodypart_coordinates
+
 
 ###############################################################################
 
@@ -40,3 +42,57 @@ def plot_distance_speed(
 
 ###############################################################################
 
+
+def plot_bodypart_trajectory(
+    *,  # Enforce keyword arguments
+    ax,
+    dataframe,
+    bodypart,
+    cs_id,
+    cs_epoch,
+    animal,
+):
+    """Plot bodypart trajectory.
+
+    Parameters
+    ----------
+    ax : matplotlib.axes.Axes
+        The ax to plot the data
+
+    dataframe : pandas.DataFrame
+        Dataframe generated with function create_bodypart_coord_dataframe().
+
+    bodypart : str
+        Bodypart name. Must be in the dataframe columns.
+
+    cs_id : str
+        Specific cs (eg 'cs_01')
+
+    cs_epoch : str
+        Specifc cs epoch (eg 'peri_cs')
+
+    animal : Animal object
+        Containing all the information about the animal as class attributes
+
+    Returns
+    -------
+    ax : matplotlib.axes.Axes
+        Single ax object.
+    """
+    # Fetch the x, y coordinates for a specific bodypart
+    x, y = fetch_bodypart_coordinates(
+        dataframe=dataframe,
+        bodypart=bodypart,
+        cs_id=cs_id,
+        cs_epoch=cs_epoch,
+    )
+
+    ax.plot(x, y, label=f'{cs_id} | {cs_epoch} | {bodypart}', lw=3)
+    ax.invert_yaxis()
+    ax.set(ylim=(768, 0),
+           xlim=(0, 1024),
+           title=f'{animal.experiment_id} | {animal.session} | {animal.sex} | {animal.animal_id}')
+    ax.axis('off')
+    ax.legend(loc='lower center')
+
+    return ax

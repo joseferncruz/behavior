@@ -15,6 +15,14 @@ def calculate_euclidean_distance(df, convert=False):
     """
     Calculate the euclidean distance between two consecutive x, y coord.
 
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        data output from deeplabcut
+
+    convert : bool, optional
+        Convert pixel to cm: 28 cm = 330 pix
+
     Returns
     -------
     array with distance values for each CS
@@ -47,8 +55,24 @@ def calculate_speed_per_frame(distance_vector, frame_rate):
 def calculate_euclidean_distance_dataframe(
     dataframe,
     rat,
+    convert=True,
 ):
-    """Create a dataframe with the euclidean distance for each coord pair."""
+    """Create a dataframe with the euclidean distance for each coord pair.
+
+    Parameters
+    ----------
+    dataframe : pandas.DataFrame
+
+    rat : rat object
+
+    convert : bool, optional
+        Convert pix to cm: 28 cm = 330 pix
+
+    Returns
+    -------
+    dataframe_final
+    euclidian_dict
+    """
     # Extract the list of unique bodyparts
     bodypart_list = list({bodypart
                           for scorer, bodypart, coord in dataframe.columns})
@@ -65,7 +89,7 @@ def calculate_euclidean_distance_dataframe(
     for bodypart in bodypart_list:
 
         array = calculate_euclidean_distance(dict_df.get(bodypart),
-                                             convert=True,
+                                             convert=convert,
                                              )
         euclidian_dict.setdefault(bodypart)
 
@@ -422,6 +446,136 @@ def calculate_mean_speed_per_epoch(
         # Append to the dataframe to return
         df = df.append(speed).reset_index(drop=True)
     return df
+
+###############################################################################
+
+def create_bodypart_coord_dataframe(
+        dataframe,
+        rat,
+):
+    """Create a datafrme with each x, y bodypart position and
+    corrects the aquisition rate to 30 fps.
+
+    Parameters
+    ----------
+    dataframe : DataFrame
+        The raw dataframe from deeplabcut output.
+
+    rat : Animal object
+        Instance of the Animal class with all the necessary information
+
+    Returns
+    -------
+    dataframe : DataFrame
+        Dataframe with x, y bodypart coordinate per cs,
+        per cs_epoch with Animal information.
+
+    """
+    # Extract the list of unique bodyparts from deeplabcut raw dataframe
+    bodypart_list = list({bodypart
+                          for scorer, bodypart, coord in dataframe.columns})
+
+    # Create a dictionary with the bodypart as key,
+    # and the x, y deeplabcut dataframe as values
+    idx = pd.IndexSlice
+    dict_bodypart_dataframes = {bodypart: dataframe.loc[:, idx[:, bodypart, ['x', 'y']]]
+                                for bodypart in bodypart_list}
+
+    # Part 1 - Loop the bodyparts, extract each x, y position
+    # during each cs and correct the aquisition (to 30fps)
+    bodypart_coord_dict = {}
+    for bodypart in bodypart_list:
+
+        cs_array_dict = {}
+        for cs, cs_start in rat.cs_start.items():  # Loops through all the cs
+
+            # For each coordinate
+            coord_dict = {}
+            for coord in ['x', 'y']:
+
+                # Slice the corresponding cs epoch:
+                # 60 seconds before cs_start : 90 seconds after
+                start = int(cs_start - (60*rat.frame_rate))  # pre-cs
+                end = int(cs_start + (90*rat.frame_rate))    # post-cs start
+
+                # Interpolate the data to correct from aquisition rate to 30fps.
+                # original data
+                data_points = dict_bodypart_dataframes.get(bodypart).loc[start:end, idx[:, :, coord]].to_numpy()
+
+                # real aquisition rate
+                old_length = np.linspace(start,
+                                         end,
+                                         num=len(data_points),
+                                         endpoint=True,
+                                         )
+
+                # new aquisition rate: 30 frames per second
+                # during 150 seconds (ie 60+90)
+                new_length = np.linspace(start,
+                                         end,
+                                         num=(150*30),
+                                         endpoint=True,
+                                         )
+
+                # numpy interp function arguments
+                x = new_length
+                xp = old_length
+                fp = data_points.squeeze()
+                # Interpolate
+                yinterp = np.interp(x, xp, fp)
+
+                # Add the coordinate interpolation to dictionary
+                coord_dict.update({coord: yinterp})
+
+            # Add the x, y interpolations as values to cs_id as key
+            cs_array_dict.setdefault(cs, coord_dict)
+        # for each bodypart, assing the dictionary
+        # containing all the cs and corresponsing x, y positions
+        bodypart_coord_dict.setdefault(bodypart, cs_array_dict)
+
+    # Part 2 - Build the dataframe to return
+
+    # Instantiate the DataFrame
+    columns = [
+        'user', 'exp_id', 'treatment',
+        'session', 'species', 'animal_id',
+        'session', 'cs_id', 'cs_epoch'
+    ]
+    number_cs = len(rat.cs_start.keys())
+    dataframe_final = pd.DataFrame(index=np.arange(1, 4500*number_cs+1),
+                                   columns=columns)
+
+    # Build the final dataframe to return
+    for bodypart in bodypart_list:
+        counter = 1
+        for cs, cs_start in rat.cs_start.items():
+
+            # Update dataframe
+            start = counter
+            end = counter+4499
+
+            # Add the ed_bodypart to the dataframe_final
+            for coord in ['x', 'y']:
+                coord_data = bodypart_coord_dict.get(bodypart).get(cs).get(coord)
+                dataframe_final.loc[start:end, f'{coord}_coord_{bodypart}'] = coord_data
+
+            dataframe_final.loc[start:end, 'cs_id'] = cs
+            # Conplete info with animal object information
+            dataframe_final.loc[start:end, 'user'] = rat.user
+            dataframe_final.loc[start:end, 'exp_id'] = rat.experiment_id
+            dataframe_final.loc[start:end, 'session'] = rat.session
+            dataframe_final.loc[start:end, 'species'] = rat.species
+            dataframe_final.loc[start:end, 'animal_id'] = rat.animal_id
+
+            # Discriminate the cs_epoch
+            dataframe_final.loc[start:start+1800, 'cs_epoch'] = 'pre_cs'
+            dataframe_final.loc[start+1800:start+2700, 'cs_epoch'] = 'peri_cs'
+            dataframe_final.loc[start+2700:end, 'cs_epoch'] = 'post_cs'
+
+            # move to the next cs_id
+            counter += 4500
+
+    return dataframe_final
 
 ###############################################################################
 

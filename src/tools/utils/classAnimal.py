@@ -59,7 +59,6 @@ class Animal():
             # Search in the video_basename the date of experiment
             pattern = r'(\d\d\d\d\d\d\d\d)'  # yyyymmdd
             experiment_date = re.search(pattern, self.video_basename).group()
-            print(experiment_date)
             date = datetime.datetime.strptime(experiment_date, '%Y%m%d')
 
             return (date - date_of_birth).days

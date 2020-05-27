@@ -10,16 +10,36 @@ Created on Wed Feb 19 10:41:58 2020
 import pandas as pd
 import re
 from tools.utils.classAnimal import Animal
-
+import glob
+import os
 
 ##############################################################################
+
 
 def fetch_animal_info(
     video_key,
     main_record_abs_path,
     experiment_info_abs_path,
 ):
-    """Fetch animal information using animal_id."""
+    """Fetch animal information using animal_id.
+
+    Parameters
+    ----------
+    video_key : str
+        Video label following established labelling convention.
+
+    main_record_abs_path : str
+        Absolute path to the .csv file containing animal records.
+
+    experiment_info_abs_path : str
+        Absolute path to the .csv file containing specific information about
+        the experiment.
+
+    Returns
+    -------
+    animal : object from Animal Class
+        Contains all information as class attributes.
+    """
     # Make sure that the key object is a string
     assert isinstance(video_key, str), 'Key must be a string object'
 
@@ -84,8 +104,24 @@ def fetch_animal_info(
 
 ###############################################################################
 
-def create_basic_working_record(animal, n_rows):
-    """Create basic dataframe with animal details"""
+
+def create_basic_working_record(
+        animal,
+        n_rows,
+):
+    """Create basic dataframe with animal details.
+
+    Parameters
+    ----------
+    animal : object from Animal Class
+        Contains the information about specific animals.
+    n_rows : int
+        Number of rows in the dataframe to return.
+
+    Returns
+    -------
+    dataframe : DataFrame
+    """
 
     columns = [
         'user', 'exp_id', 'treatment',
@@ -102,3 +138,106 @@ def create_basic_working_record(animal, n_rows):
     dataframe['age_days'] = animal.age_at_experiment()
 
     return dataframe
+
+###############################################################################
+
+def concatenate_transformed_dataframes(
+        directory_path,
+        save_at_directory=False,
+):
+    """Concatenates dataframes with same columns at specific directory.
+
+    Parameters
+    ----------
+    directory_path : str
+        Absolute path to the directory.
+
+    save_at_directory : bool, optional
+        In True, it saves a .csv file with the merged dataframes at the dir.
+
+    Returns
+    -------
+    merged_dataframes : DataFrame
+        All the dataframes merged.
+
+    """
+    # Check all the dataframes that exist in the saving directory
+    dataframe_filepaths = glob.glob(os.path.join(directory_path,
+                                                 '*_individual_summary_stats.csv'))
+
+    # Read all the dataframes and append them to a list
+    dataframes_to_merge = [pd.read_csv(filepath, index_col=0)
+                           for filepath in dataframe_filepaths]
+    # Concatenate all the dataframes together
+    merged_dataframes = pd.concat(dataframes_to_merge, ignore_index=True)
+
+    # Save the .csv file at the directory location
+    if save_at_directory:
+        # Define the basename for the final file
+        pattern = '(\w\w_\w+\d+_\d+_\w+\d+_\w_)'
+
+        # Search in the first element of the previous list of paths
+        to_match = dataframe_filepaths[0]
+        # Find the name using regex
+        matched = re.search(pattern, to_match).group()
+        final_basename = f'{matched}merged_summary_stats.csv'
+
+        # Absolute saving filepath
+        abs_savepath = os.path.join(directory_path, final_basename)
+
+        # Save the dataframe
+        merged_dataframes.to_csv(abs_savepath)
+
+        # Confirm success
+        print(f'{final_basename} file saved at \n {abs_savepath}')
+
+    return merged_dataframes
+
+
+###############################################################################
+
+def fetch_bodypart_coordinates(
+    *,  # enforce keyword arguments
+    dataframe,
+    bodypart,
+    cs_id,
+    cs_epoch,
+):
+    """Fetch x, y coord from dataframe from create_bodypart_coord_dataframe().
+
+    Parameters
+    ----------
+    dataframe : pandas DataFrame
+        Dataframe with bodypart positions created using the function
+        create_bodypart_position_dataframe.
+    bodypart : str
+        Name of the bodypart must be in the columns from dataframe.
+    cs_id : str
+        Name of the specific cs.
+    cs_epoch : str
+        Name of the specific cs epoch.
+
+    Returns
+    -------
+    x, y : tuple of numpy.ndarray
+        Coordinate in pixels for bodypart for a frame during a cs/cs_epoch.
+    """
+    assert isinstance(bodypart, str), f"{bodypart} must be a string"
+    assert isinstance(cs_id, str), f"{cs_id} must be a string"
+    assert isinstance(cs_epoch, str), f"{cs_epoch} must be a string"
+
+    # Subset dataframe using cs_id
+    target_cs_id = dataframe[dataframe['cs_id'].isin([cs_id])]
+
+    # Subset previous dataframe using cs_epoch
+    target_cs_epoch = target_cs_id[target_cs_id['cs_epoch'].isin([cs_epoch])]
+
+    # Assign the x, y coordiates as numpy arrays
+    x = target_cs_epoch[f'x_coord_{bodypart}'].to_numpy()
+    y = target_cs_epoch[f'y_coord_{bodypart}'].to_numpy()
+
+    return x, y
+
+###############################################################################
+
+
