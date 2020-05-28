@@ -24,12 +24,12 @@ if __name__ == "__main__":
         author='Jose Cruz, PhD',
         author_email='jose.cruz@nyu.edu',
         url='https://github.com/joseferncruz/behavior',
-        packages=find_packages(), 
+        packages=find_namespace_packages(include=["behavior.*"],
         include_package_data=True,
         install_requires=requirements,
         license='MIT',
         python_requires='>=3.6',
-
+        zip_safe=False,
     )
 
 ########## More information
