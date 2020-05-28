@@ -37,7 +37,7 @@ def fetch_animal_info(
 
     Returns
     -------
-    animal : object from Animal Class
+    animal : instance from Animal Class
         Contains all information as class attributes.
     """
     # Make sure that the key object is a string
@@ -239,5 +239,3 @@ def fetch_bodypart_coordinates(
     return x, y
 
 ###############################################################################
-
-
