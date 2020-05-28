@@ -3,4 +3,9 @@ communications/
 data/
 desktop.ini
 documentation/
+
+# Cache from Spyder
 __pycache__/
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/
