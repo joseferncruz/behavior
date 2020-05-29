@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Behavior - 2020 - LeDoux Lab
 
