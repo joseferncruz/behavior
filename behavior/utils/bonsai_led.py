@@ -1,8 +1,9 @@
-# -*- coding: utf-8 -*-
 """
-Created on Wed Mar 18 10:38:18 2020
+Behavior - 2020 - LeDoux Lab
 
-@author: josec
+Licensed under GNU Lesser General Public License v3.0
+
+@author: Jose Oliveira da Cruz | jose.cruz@nyu.edu
 """
 # Import modules
 import pandas as pd
@@ -125,9 +126,9 @@ def detect_bonsai_led_state(
     base_name = re.search(pattern, bonsai_csv).group().replace('.csv',
                                                                "_CS-INDEX.txt",
                                                                )
-    
+
     cs_index_saving_path = os.path.join(output_directory, base_name)
-    
+
     with open(cs_index_saving_path, "w") as file:
         file.write(str(CS_frame))
     print(f"Extraction done, cs indices saved at: {cs_index_saving_path}")

@@ -1,6 +1,7 @@
-# -*- coding: utf-8 -*-
 """
-Created on Wed Feb 19 10:41:58 2020
+Behavior - 2020 - LeDoux Lab
+
+Licensed under GNU Lesser General Public License v3.0
 
 @author: Jose Oliveira da Cruz | jose.cruz@nyu.edu
 """
