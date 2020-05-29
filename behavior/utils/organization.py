@@ -9,7 +9,7 @@ Created on Wed Feb 19 10:41:58 2020
 
 import pandas as pd
 import re
-from tools.utils.classAnimal import Animal
+from behavior.utils.classAnimal import Animal
 import glob
 import os
 
