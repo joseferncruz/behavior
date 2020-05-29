@@ -31,6 +31,3 @@ setup(
     python_requires='>=3.6',
     zip_safe=False,
 )
-
-########## More information
-# https://python-packaging-user-guide.readthedocs.io/tutorials/packaging-projects/
